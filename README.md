@@ -1,7 +1,4 @@
 
-[笔记]UNIX高级环境编程
----
-
 ## 第一章 基础知识
 
 ### 1.2 体系结构
@@ -46,24 +43,22 @@
 ### 3.2 文件描述符
 - 一个非负整数，内对对于已打开的文件的引用表示
 - 通常0，1，2分别表示标准输入，标准输出，标准错误输出
-
 ### 3.3 函数open和openat
 参数
 - path: `char *`
 - oflag: `int` 多个常量使用或运算构成
-- O_RDONLY  只读
-- O_WRONLY 只写
-- O_RDWR 读写
-- O_EXEC 只执行
-- O_APPEND  追加写
-- O_CREATE 不存在则创建
-- O_NOBLOCK 非阻塞
-- O_TRUNC 将文件长度截为0
+    - O_RDONLY  只读
+    - O_WRONLY 只写
+    - O_RDWR 读写
+    - O_EXEC 只执行
+    - O_APPEND  追加写
+    - O_CREATE 不存在则创建
+    - O_NOBLOCK 非阻塞
+    - O_TRUNC 将文件长度截为0
 - fd: `int`
-- path使用绝对路径时fd被忽略，openat相当于open
-- path指定相对路径， fd指出了相对路径在文件系统中的开始地址
-- openat的作用是是的线程可以打开相对路径名打开文件，而非只限于当前工作目录
-
+    - path使用绝对路径时fd被忽略，openat相当于open
+    - path指定相对路径， fd指出了相对路径在文件系统中的开始地址
+    - openat的作用是是的线程可以打开相对路径名打开文件，而非只限于当前工作目录
 ### 3.4 函数create
 - 早期UNIX系统open函数不支持打开一个尚未存在的文件
 - 等效于 open(path, O_WRONLY | o_CREATE | O_TRUNC, mode)
@@ -73,22 +68,20 @@
 
 ### 3.6 函数lseek
 lseek不会引起任何IO操作，只是将当前偏移量记录在内核中
-
 ```C
 #include <unistd.h>
 off_t lseek(int fd, off_t offset, int whence);
 ```
-
 - whence
-- SEEK_SET: 文件开始处
-- SEEK_CUR： 文件当前值
-- SEEK_END：文件结尾处
+    - SEEK_SET: 文件开始处
+    - SEEK_CUR： 文件当前值
+    - SEEK_END：文件结尾处
 ### 3.10 文件共享
 使用三级数据结构表示打开的文件
 - 进程表
 
 |fd|文件指针|
-|---|---|
+|--|--|
 |0| * |
 
 - 文件表
@@ -97,8 +90,8 @@ off_t lseek(int fd, off_t offset, int whence);
     - 指向v节点的指针
 
 - v节点表
-    - 节点信息
-    - 文件长度
+  - 节点信息
+  - 文件长度
 
 注： 多个进程打开同一个文件，会有各自的进程表和文件表，但指向同一个v节点表
 
@@ -120,18 +113,15 @@ dup函数用来复制一个现有的文描述符，新的fd与原有的fd共享�
 void sync(void);
 int fsync(int fd);
 ```
-
 - 延迟写（delayed write）: 向文件写入数据是，内存通常现将数据复制到缓冲区，中，然后排入队列
 - sync: 将所有修改过的块缓冲区排入写队列，不等待实际磁盘写操作结束就返回
 - fsync: 只对fd指定的文件起作用，等待写操作结束才返回，除更新数据外，也同步更新文件的属性
 
 ### 3.14 函数fcntl
-
 ```C
 #include <fcntl.h>
 int fcntl(int fd, int cmd, .../* int arg */);
 ```
-
 fcntl可以改变已经打开的文件的属性，主要有以下5种功能
 - 复制一个已有的描述符（cmd = F_DUPDF or F_DUPFD_CLOEXEC）
 - 获取或设置文件描述符标志(F_GETFD or F_SETFD)
@@ -139,8 +129,8 @@ fcntl可以改变已经打开的文件的属性，主要有以下5种功能
 - 获取或设置异步IO所有权(F_GETOWN or F_SETOWN)
 - 记录或设置记录锁(F_GETLK or F_SETLK or F_SETLKW)
 
-
 ## 第四章 文件和目录
+
 ### 4.3 文件类型
 - 普通文件（regular file）
 - 目录文件（directory file）
@@ -163,9 +153,86 @@ umask的值是027时代表阻止同组成员写文件以及其他用户读写执
 chmod指在指定的文件上进行操作
 fchmod指对已经打开的文件进行操作
 
+
 ## 第五章 标准I/O库
+### 5.2 流和FILE对象
+- 当使用标准I/O库打开或创建一个文件时，我们使用一个流和一个文件相关联
+- 流的字符集分为单字节或者多字节的，对应的流程对象为字节定向或宽定向
+- `freopen`会清除一个流的定向，`fwide`可以获取流定向的信息
+- FILE对象包含了管理流需要的所有信息
+  - 文件描述符
+  - 指向流缓冲区的指针
+  - 缓冲区的长度
+  - 当前缓冲区的字符数
+  - 出错标志
+
+### 5.4 缓冲
+- 三种类型
+  - 全缓冲：填满缓冲区后才进行实际的I/O操作
+  - 行缓冲：遇到换行符时执行I/O操作
+  - 不带缓冲
+— UNIX惯例：标准错误不带缓冲，终端设备的流为行缓冲，其他流为全缓冲
+- 可通过`setbuf`或`setvbuf`设置缓冲类型
+  - _IOFBF 全缓冲
+  - _IOLBF 行缓冲
+  - _IONBF 无缓冲
+- `fflush` 会将缓冲区的数据传送至内核
+
+### 5.5 打开流
+`fopen`、 `freopen`
+
+### 5.6 每次一个字符的IO
+- 一次读一个字符可用如下三个函数
+  - getc(FILE *fp)
+  - fgetc(FILE *fp)
+  - getchar == getchar(stdin)
+- 压回字节流： ungetc(int c, FILE *fp)
+- 输出: putc, fputc, putchar
+
+### 5.7 每次一行的IO
+
+- fgets/fputs: 缓冲区总以null结尾
+
+### 5.9 二进制IO
+- 一次读一个完成的结构，不会像fgets遇到null就会停止
+- 二进制IO跨系统可能会遇到不兼容的问题，如浮点数的格式，结构的对齐方式可能不同
+### 5.10 定位流
+
+### 5.11 格式化IO
+#### 输出
+- printf: 格式化数据写到标准输出
+- fprintf： 写到指定的流
+- dprintf： 写到指定的文件描述符
+- sprintf： 写到指定的数组buf中， 可能会有溢出问题
+- snprinf： 写到指定的buf中，溢出的数据会被丢弃
+
+#### 输入
+- scanf
+- fscanf
+- sscanf
+
+### 5.13 临时文件
+- tmpnam: 返回一个有效路径名的字符串
+- tmpfile：通常的实现是先调用tmpmam产生一个唯一的路径名，然后用该路径名创建一个文件并立即unlink它，这样在关闭该文件或程序结束时将自动删除这种文件；不过正因为分为两步，有可能另外一进程也用相同的名字创建文件
+- mkstemp: 创建一个普通文件含读写权限，若要自动删除需要主动unlink
+
+### 5.14 内存流
+fmemopen: 可以指定缓冲区用户内存流
 
 ## 第六章 系统数据文件和信息
+
+### 6.2 密码文件
+- 文件名 /etc/passwd
+- 存储struct： passwd
+- 查看用户信息 finger -p username
+### 6.3 阴影密码
+- 文件名：/etc/shadow
+- struct: spwd
+
+### 6.4 组文件
+- 文件： /etc/group
+
+### 6.10 时间和日期
 
 ## 第七章 进程环境
 
@@ -202,4 +269,4 @@ fchmod指对已经打开的文件进行操作
 - [源码下载](http://www.apuebook.com/code3e.html)
 - [Make and apply apue.h](https://stackoverflow.com/questions/53236356/make-and-apply-apue-h)
 - [errorno详解](http://c.biancheng.net/c/errno/)
-- [huaxz笔记](https://github.com/huaxz1986/APUE_notes)
+- [huaxz1986/APUE_notes](https://github.com/huaxz1986/APUE_notes/)
