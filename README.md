@@ -236,6 +236,124 @@ fmemopen: 可以指定缓冲区用户内存流
 
 ## 第七章 进程环境
 
+### 7.3 进程终止
+
+#### 终止方式
+
+- 正常终止
+  - main返回
+  - exit
+  - _exit
+  - 最后一个线程从其启动例程返回
+  - 最后一个线程条用pthread_exit
+- 异常终止
+  - 调用abort
+  - 接到一个信号
+  - 最后一个线程对取消请求做响应
+  
+#### 退出
+- _exit会立即进入内核，而exit会执行一下清除处理如fclose，再返回内核
+- atexit
+```C
+#include <stdlib.h>
+int atexit(void (*func)(void));
+```
+atexit用来登记终止处理程序(exit handler)，exit执行时会自动调用，调用的顺序和登记顺序相反
+ 
+### 7.4 命令行参数
+```C
+int main(int argc, char *argv[])
+```
+`argv[argc]`是个空指针
+
+### 7.5 环境表
+```C
+extern char **environ;
+```
+全局变量environ为指向环境表的指针，环境表为一个字符串指针数组，字符串为`key-value`形式
+
+### 7.6 C程序的存储空间布局
+- 正文段：CPU执行的机器指令部分，通常可同享和只读
+- 初始数据段：明确需要赋初值的变量
+- 未初始化的数据段(bss)：通常初始化为0或空指针
+- 堆：通常在堆中动态存储分配
+- 栈：函数调用的调用者的环境信息和返回结果的地址，及局部变量信息
+- 命令行参数和环境变量
+
+### 7.7 共享库
+共享库使得可执行文件中并在需要宝行公用的库函数，程序在第一次执行或者第一只调用某个库函数的时候，用动态链接的方法将程序与共享库函数相链接
+
+### 7.8 存储空间分配
+
+#### 三个函数
+```C
+#include <stdlib.h>
+void *malloc(size_t size);
+void *calloc(size_t nobj, size_t szie);
+void *realloc(void *ptr, size_t newsize);
+```
+- malloc: 分配制度字节数的存储区，初始值不确定
+- calloc: 为指定数量指定长度的对象分配存储空间，每一个bit都初始化为0
+- reallloc: 增加或减少之前分配区的长度。增加长度时，可能需要将之前分配区的内容复制到
+新的够大的区域，新增区域的初始值不确定
+
+
+### 7.9 环境变量
+```C
+#include <stdlib.h>
+
+int putenv(char *str);
+int setent(const char *name, const char *value, int rewrite)
+int unsetenv(const char *name);
+```
+- putenv取`name=value`格式的字符串放到环境表中，如果name已存在，则先删除之前的定义
+- setenv将name设置为value, 如果name已经存在，若rewrite非0，则先删除现有定义，若rewrite=0则不更新
+- unsetenv删除name的定义
+
+环境变量的更新
+
+- 默认环境表和指向的环境字符串都存在栈之上
+- 删除找到对应的指针，后面的纸质依次向前移动一个位置即可
+- 如果更新一个name，若value长度小于等于原值，原地更新；否则得malloc分配空间
+- 如果新增一个name，则需要malloc为环境表和新怎的字符串分配空间，不过环境表的指针
+大部分仍指向栈顶指向的空间
+
+### 7.10 setjump和longjump函数
+```C
+#include <setjump.h>
+int setjmp(jump_buf env);
+void longjmp(jmp_buf emv, int val);
+```
+- longjump实现了非本地跳转机制，常用于信号处理和异常处理
+- wiki: https://zh.wikipedia.org/wiki/Setjmp.h
+
+
+### 7.11 函数getrlimit和setrlimit
+
+进程资源限制的查询和更改
+```C
+#include <sys/resource.h>
+
+int getrlimit(int resource, struct rlimit *rlprt);
+init setrlimit(int resource, const struct rlimit *rlprt);
+
+struct rlimit {
+    rlimi_t rlimi_curr; // soft limit
+    rlimi_t rlimi_max; // hard limit: maxinum value for rlimi_cur
+}
+```
+- 更改资源限制的规则
+  - 任何一个进程都可以将软限制值改为小于等于其硬限制值
+  - 任何一个进程都可以降低其硬限制值
+  - 只有超级用户进程可以提高硬限制值
+  
+- 资源种类
+  - RLIMIT_AS: 进程可用存储空间的最大字节
+  - RLIMIT_DATA: 数据段的最大字节长度（初始化数据、非初始化数据和堆的总和）
+  - RLIMIT_NOFILE: 进程能打开的最多文件数 
+  - RLIMIT_STACK: 栈的最大字节长度 
+  
+  
 ## 第八章 进程控制
 
 ## 第九章 进程关系
