@@ -356,9 +356,237 @@ struct rlimit {
   
 ## 第八章 进程控制
 
+### 8.2 进程标识
+- ID为0的进程为调度进程，为内核的一部分
+- ID为1的进程为init进程，以超级用户权限运行
+- ID为2的进程为页守护进程(page daemon)，负责支持虚拟存储器系统的分页操作
+
+### 8.3 fork函数
+```C
+#include <unistd.h>
+pid_t fork(void);
+```
+fork函数用于创建一个新的进程，
+- 调用一次返回两次，子进程的返回值是0，父进程的返回值是子进程的pid
+- 子进程获得父进程的数据空间，堆和栈的副本，使用copy-on-write技术，这些区域访问权限改为只读，
+如果父进程或子进程修改了部分区域，那内核只为修改的那块内存制作一个副本，通常是虚拟内存中的一页
+
+### 8.5 exit
+#### 子进程终止
+- 当进程正常终止时，exit或_exit函数的返回值的返回值作为终止状态(termination status);
+- 异常终止时，内核会产生一个指示异常终止原因的终止状态
+- 父进程可以用wait或waitpid获取子进程的终止状态
+- 父进程未对其善后处理（获取终止状态、是否仍占用的资源）的进程称为zombie僵尸进程
+
+#### 父进程终止
+ - 父进程终止后，子进程的父进程变成init进程，init进程只有子进程终止，就会调用wait,这样就不会导致系统塞满了僵尸进程
+ 
+#### 8.6 wait和waitpid函数
+```C
+#include <sys/wait.h>
+
+pid_t wait(int *statloc);
+pid_t waitpid(pid_t pid,int *statloc, int options);
+```
+- 当一个进程结束时，内核会向其父进程发送`SIHCHLD`信号，父进程可以选择忽略（默认），或者提供一个响应函数
+- wait: 如果所有子进程都在运行则阻塞，有子进程终止则获得子进程的终止状态立即返回，如果没有子进程会出错
+- waitpid与wait的区别
+  - 可以指定等待的pid
+    - pid == -1: 等待任一子进程，等效于wait
+    - pid == 0: 等待组ID和调用进程的组ID相同的子进程
+    - pid >0 : 等待指定子进程
+    - pid < -1: 等待组ID等于abs(pid)的任一子进程
+  - waitpid可以设置option
+    - WNOHANG: 如果指定的至今传并不是立即可用的，waitpid不阻塞，返回0
+    - WCONTINUED
+    - WUNTRACED
+        
+- statloc会返回终止状态
+
+- 通过四个互斥的宏可以获得进程终止的原因
+  - WIFEXITED(status): 如果true表示正常终止
+  - WIFSIGNALED(status): 如果true表示异常终止
+  - WIFSTOPPED(status): 如果true表示暂停
+  - WIFCONTINUED(status): 如果true表示暂停后又继续
+
+#### 8.7 waitid函数
+```C
+#include <sys/wait.h>
+int waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options);
+```
+
+- idtype
+  - P_PID: 等待特定子进程
+  - P_PGID: 等待特定进程组的子进程
+  - P_ALL: 等待任一子进程
+- options
+  - WCONTINUED: 子进程曾被停止后又已继续
+  - WEXITED: 已退出
+  - WNOHANG:  如无可用的子进程退出状态，立即返回而非阻塞
+  - WNOWAIT: 不破坏子进程的退出状态，仍可用wait/waitid/waitpid获取
+  - WSTOPPED: 已停止的子进程
+ 
+#### 8.8 wait3和wait4函数
+相比wait函数，可以获取子进程的使用资源概况
+```C
+#include <sys/type.h>
+#include <sys/wait.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+
+pid_t wait3(int *statloc, int options, struct rusage *rusage)
+pid_t wait4(pid_t pid,int *statloc, int options, struct rusage *rusage)
+```
+
+#### 8.9 竞争条件（race condition）
+如果多个进程对企图对共享数据进行某种处理，而最后的结果又去结余进程运行的顺序时，我们认为发生了race condition
+
+#### 8.10 exec函数
+
+exec函数只是用磁盘上的一个进程序提花了当前进程的正文段，数据段，堆和栈
+
+```C
+#include <unitstd.h>
+int execl (const char *pathname, const char *arg0, ... /* (char *)0 */);
+int execv (const char *pathname, char *const argv[]);
+int execle (const char *pathname, const char *arg0, ... /* (char *)0, char *const envp[] */);
+int execve (const char *pathname, char *const argv[], char *const envp[]);
+int execlp (const char *filename, const char *arg0, ... /* (char *)0 */);
+int execvp (const char *filename, char *const argv[]);
+int fexecve(int fd, char *const argv[], char *const envp[]);
+```
+
+- 第一个参数前面四个函数取路径名作为参数，后面两个取文件名作为参数，最后一个取fd作为参数
+
+- 第二个区别是参数表的传递，execl/execlp/execle要求将新程序的每个命令行参数都说明为一个单独的参数，这种参数表以空指针结尾；
+对另外四个参数则应该构建一个指向各参数的指针数组，然后将该数组地址作为参数
+
+- 在很多UNIX实现中，只有execve是内核的系统调用，另外6个函数最终都要调用该系统调用
+
+#### 8.11 更改用户ID和更改组ID
+```C
+#include <unistd.h>
+
+int setuid(uid_t uid);
+int setgid(gid_t gid);
+```
+
+#### 8.12 解释器文件(interpreter file)
+
+通常的形式是`#! pathname [optional-argument]`，!和pathname之间的空格可选
+
+#### 8.13 函数system
+```C
+#include <stdlib.h>
+int system(const char *cmdstring);
+```
+`system`在实现中调用了`fork`, `exec`, `waitpid`
+
+#### 8.14 进程会计process accounting
+每当进程结束时内核就会写一个会计记录，一般包括命令名、CPU总时间、用户ID、启动时间等，各个平台有所区别
+- 不能获取init进程这种永不终止的进程的记录
+- 记录的顺序对应进程终止的顺序
+
+
+#### 8.16 进程调度
+
+##### nice进程调度优先级，nice值越高，优先级越低， 可选范围在`0~(2*NZERO)-1`
+
+- `nice` 设置当前进程的优先级
+
+```c
+#include <unistd.h>
+
+//return: 若成功，返回新的nice值，否则返回-1
+int nice(int incr);
+```
+
+- `getpriority`获取进程或进程组的nice值
+
+```c
+#include <sys/resource.h>
+
+int getpriority(int which, id_t who);
+```
+
+- `setpriority`为进程、进程组和特定用户的所有进程设置nice值
+
+```c
+#include <sys/resource.h>
+
+int setpriority(int which, id_t who, int value);
+```
+
+#### 8.17 进程时间
+```C
+#include <sys/times.h>
+
+struct tms {
+    clock_t tms_utime; /* usert CPU time */
+    clock_t tms_stime; /* system CPU time */
+    clock_t tms_cutime; /* user CPU time, terminated chhildren */
+    clock_t tms_cstime; /* system CPU time, terminated children */
+}
+
+clck_t times(struct tms *buf);
+```
+
 ## 第九章 进程关系
 
+### 9.2 终端登录
+启动过程：init进程fork一个子进程 -> exec getty -> exec login
+
+### 9.3 网络登录
+系统使用伪终端(pseudo termiaml), 将终端的操作映射为网络操作 
+
+### 9.4 进程组
+每个进程都属于某个进程组
+
+同一进程组的歌进程接受来自同一个终端的信号
+
+```c
+#include <unistd.h>
+
+pid_t getpgrp(void);
+```
+
+每个进程组有一个组长进程，组长进程的进程ID和进程组ID相同
+
+`setpgid`可以加入或创建一个新进程组
+```c
+#include <unistd.h>
+
+int setpgid(pid_t pid, pid_t pgid);
+```
+
+### 9.5 会话（session）
+session是一个或多个进程组的集合
+
+`setsid`创建一个新的会话
+```c
+#include <unistd.h>
+pid_t setsid(void);
+```
+
+
+### 9.6 控制终端
+一个会话可以有一个控制终端（control terminal）
+
+与控制终端连接的进程称为控制进程（controlling process）
+
+一个会话通常有一个前台进程组(foreground process group)和一个或多个后台进程组(background process group)
+
+终端输入和终端产生的信号会发送至前台进程组
+
+
 ## 第十章 信号
+
+### 1.3 signal函数
+```c
+#include <signal.h>
+
+void (*signal(int signo, void (*func)(int))) (int);
+```
 
 ## 第十一章 线程
 
