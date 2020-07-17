@@ -616,6 +616,113 @@ void (*signal(int signo, void (*func)(int))) (int);
 
 - 信号处理程序应该保存调用之前的errno,调用后再恢复errno
 
+
+### kill和raise函数
+```c
+#include <signal.h>
+int kill(pid_t pid, int signo);
+int raise(int signo);
+```
+`raise(signo)`等效于`kill(getpid(),signo)`
+
+
+kill中的pid
+- pid >0: 发送给指定pid进程
+- pid == 0: 发送同一进程组的所有进程
+- pid < -1: 发送给abs(pid)的进程组
+- pid == -1: 发送给该进程有权限发信号的所有进程
+
+signo=0定义为空信号，常用作确定一个进程是否任然存在
+
+### 10.10 函数alarm和pause
+```c
+#include <unistd.h>
+
+unsigned int alarm(unsigned int seconds);
+```
+调用alarm函数会设置定时器，超时会发送一个SIGALM信号，默认的动作是终止进程
+
+```c
+#include <unistd.H>
+
+int pause(void);
+```
+
+pause函数使进程挂起直到捕捉到一个信号，在执行了信号处理程序化，pause才返回
+
+
+### 10.11 信号集signal set
+信号集： 一个能表示多个信号的数据类型
+
+```c
+#include <signal.h>
+
+int sigemptyset(sigset_t *set)
+
+int sigfillset(sigset_t *set)
+
+int sigaddset(sigset_t *set, int signo);
+
+int sigdelset(sigset_t *set, int signo);
+
+int sigismember(sigset_t *set, int signo);
+```
+
+`sigemptyset` 初始化信号集，清除所有信号
+
+`sigfillset` 初始化信号集，包含所有信号
+
+如果只有实现的信号数小于一个整型位数，可以用一位代表一个信号
+
+```c
+#define sigemptyset(ptr) (*(prt) = 0)
+
+# 使用逗号运算符，这样sigfillset会返回0
+#define sigfillset(ptr) (*(prt) = ~(sigset)0, 0)
+
+```
+
+### 10.12 函数sigprocmask
+
+进程信号屏蔽设置
+
+```C
+# include <signal.h>
+
+int sigprocmask(int how, const, sigset_t *restrict set, sigset_t *restrict oset);
+```
+- how: SIG-BLOCK, 或添加set; SIG-UNBLOCK, 接触set中的信号； SIG-SETMAST: 赋值为set中的信号
+- set: how操作的信号集， set为null时how没有意义
+- oset: 返回当前信号屏蔽字
+
+### 10.13  函数sigpending
+
+返回当前阻塞的信号集
+```C
+#include <signal.h>
+
+int sigpending(sigset_t *set);
+```
+
+### 10.14 函数sigaction
+检查或修改指定信号的handler
+
+```C
+#include <signal.h>
+
+int sigaction(int signo, const struct sigaction *resitrct act, struct sigaction *restrict oact);
+
+
+struct sigaction {
+
+void  (*sa_handler)(int);
+sigset_t sa_mask;
+int sa_flags;
+void (*sa_sigaction) (int, siginfo_t *, void *);
+}
+```
+
+
 ## 第十一章 线程
 
 ## 第十二章 线程控制
