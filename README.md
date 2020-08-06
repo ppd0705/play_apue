@@ -691,7 +691,7 @@ int sigismember(sigset_t *set, int signo);
 
 int sigprocmask(int how, const, sigset_t *restrict set, sigset_t *restrict oset);
 ```
-- how: SIG-BLOCK, 或添加set; SIG-UNBLOCK, 接触set中的信号； SIG-SETMAST: 赋值为set中的信号
+- how: SIG_BLOCK, 或添加set; SIG_UNBLOCK, 接触set中的信号； SIG_SETMASK: 赋值为set中的信号
 - set: how操作的信号集， set为null时how没有意义
 - oset: 返回当前信号屏蔽字
 
@@ -722,6 +722,59 @@ void (*sa_sigaction) (int, siginfo_t *, void *);
 }
 ```
 
+### 10.15 函数sigsetjmp和siglongjmp
+```C
+#include <setjmp.h>
+int sigsetjmp(sigjmp_buf env, int savemask);
+
+void siglongjmp(sigjmp_buf env, int val);
+
+```
+和setjmp/longjmp唯一的区别是savemask非0时，会在env中保存进程当前的信号屏蔽字，siglongjmp从
+其中恢复保存的信号屏蔽字
+
+### 10.16 函数sigsuspend
+```C
+#include <signal.h>
+
+int sigsuspend(const sigset_t *sigmask);
+```
+
+### 10.17 函数abort
+将SIGBRT信号发送给调用进程，使其异常终止。POSIX声明abort不可忽略
+```C
+#include <stdlib.h>
+void abort(void);
+```
+
+### 10.18 函数system
+system调用者在等待命令完成时应忽略SIGINT和SIGQUIT，阻塞SIGCHLD
+
+### 10.19 函数sleep
+```C
+#include <unistd.h>
+
+unsigned int sleep(unsigned int seconds);
+```
+sleep调用会使进程挂起，直到：
+1. 已经过了seconds的秒数， sleep返回值为0
+2. 调用进程捕捉到一个信号，并从信号处理程序返回。此时sleep返回值为未休眠的秒数
+
+### 10.20 函数sigqueue
+信号队列
+```C
+#include <signal.h>
+int sigqueue(pid_t pid, int signo, const union sigval value);
+```
+
+### 10.21 作业控制信号
+
+
+
+
+
+
+
 
 ## 第十一章 线程
 
@@ -751,3 +804,4 @@ void (*sa_sigaction) (int, siginfo_t *, void *);
 - [Make and apply apue.h](https://stackoverflow.com/questions/53236356/make-and-apply-apue-h)
 - [errorno详解](http://c.biancheng.net/c/errno/)
 - [huaxz1986/APUE_notes](https://github.com/huaxz1986/APUE_notes/)
+- [MeiK2333/apue](https://github.com/MeiK2333/apue)
