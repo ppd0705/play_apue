@@ -439,11 +439,11 @@ pid_t wait4(pid_t pid,int *statloc, int options, struct rusage *rusage)
 ```
 
 #### 8.9 竞争条件（race condition）
-如果多个进程对企图对共享数据进行某种处理，而最后的结果又去结余进程运行的顺序时，我们认为发生了race condition
+如果多个进程对企图对共享数据进行某种处理，而最后的结果又取决于进程运行的顺序时，我们认为发生了race condition
 
 #### 8.10 exec函数
 
-exec函数只是用磁盘上的一个进程序提花了当前进程的正文段，数据段，堆和栈
+exec函数只是用磁盘上的一个进程序替换了当前进程的正文段，数据段，堆和栈
 
 ```C
 #include <unitstd.h>
@@ -767,16 +767,145 @@ sleep调用会使进程挂起，直到：
 int sigqueue(pid_t pid, int signo, const union sigval value);
 ```
 
-### 10.21 作业控制信号
-
-
-
-
-
-
-
-
 ## 第十一章 线程
+
+### 11.4 线程创建
+```C
+#include <pthread.h>
+
+int pthread_create(pthread_t *restrict tidp,
+    const pthread_attr_t *restrict attr,
+    void *(*start_rtn)(void *), void *restrict arg
+);
+```
+- 新线程ID会被设置成tidp指向的内存单元
+- attr参数用于定制各种不同的线程属性
+- 新线程从start_rtn函数的地址开始运行，arg指向函数的参数
+- 线程创建时新线程和调用线程的运行顺序是不确定的
+- 创建失败会返回错误码而非设置errno
+
+### 11.5 线程终止
+如果任意线程调用了exit、_Exit或_exit, 整个进程会终止
+
+单个线程可以有三种方式退出
+- 线程从启动线程中返回，返回值为线程的退出码
+- 线程可以被同一进程中的其他线程取消
+- 线程调用pthread_exit
+
+退出进程，
+```C
+include <pthread.h>
+
+void pthread_exit(void *rvla_ptr);
+```
+
+等待线程退出
+
+```C
+int pthread_join(pthread_t thread, void **rval_ptr);
+```
+
+取消线程
+
+```C
+int pthread_cancel(pthread_t tid);
+```
+
+清理
+
+```C
+#include <pthread.h>
+void pthread_cleanup_push(void (*rtn) (void *), void *arg);
+void pthread_cleanup_pop(int exucute);
+```
+- pthread_cleanup_push和pthread_cleanup_pop需要成对调用
+- 清楚程序记录在栈中，执行顺序和注册顺序相反
+- pthread_cleanup_push在MacOS上是用宏实现的，并把上下文存在了栈上，
+  push和pop之间的执行过程中栈可能被改写
+
+进程和线程之间相似的函数
+
+|进程原语|线程原语|描述|
+|---|---|---|
+|fork|pthread_create|创建新的控制流|
+|exit|pthread_exit|从现有控制流退出|
+|waitpid|pthread_join|从控制流种得到退出状态|
+|atexit|pthread_cancel_push|注册在退出控制流时的调用函数|
+|getpid|pthread_self|h获取控制流ID|
+|abort|pthread_cancel|请求控制流非正常退出|
+
+### 11.6.1 互斥量
+
+创建和销毁锁
+```C
+#include <pthread.h>
+
+int pthread_mutex_init(pthread_mutex_t *resitruct mutex, 
+    const pthread_mutexatrr_t *resitrct attr);
+    
+int pthread_mutex_destory(pthread_mutex_t *mutex);
+```
+
+获取和释放锁
+
+```C
+#include <pthread.h>
+
+init pthread_mutex_lock(pthread_mutex_t *mutex);
+init pthread_mutex_trylock(pthread_mutex_t *mutex);
+init pthread_mutex_unlock(pthread_mutex_t *mutex);
+```
+锁的粒度太粗，就会出现很多线程阻塞等待相同的锁，反之，过多的锁会开销会使性能受到影响，而且代码会变得复杂
+
+
+限时获取锁
+```C
+#include <pthread.h>
+#include <time.h>
+
+int pthread_mutex_timedlock(pthread_mutex_t *restrict mutex, const struct timespec *restrict tsptr);
+```
+
+### 11.6.4 读写锁
+
+初始化和销毁
+```C
+#include <pthread.h>
+
+int pthread_rwlock_init(pthread_rwlock_t *restric rwlock, const pthread_rwlockattr_t *restrict attr);
+int pthread_rwlock_destory(pthread_rwlock_t *rwlock);
+```
+
+加解锁
+
+```C
+int pthead_rwlock_rdlock(pthread_rwlock_t *rwlock);
+int pthead_rwlock_wrlock(pthread_rwlock_t *rwlock);
+int pthead_rwlock_unlock(pthread_rwlock_t *rwlock);
+```
+
+### 11.6.6 条件变量
+条件变量给多个线程提供了一个会和场所
+
+### 11.6.7 自旋锁spin
+自旋锁补充通过休眠是进程阻塞，而是在获取锁之前一直处于忙等阻塞状态，CPU一直被占据着
+内核态中，自旋锁除了提供互斥机制外，他们会阻塞中断
+通常适用于锁被持有时间短且不希望在重新调度上花费太多成本
+
+### 11.6.8 屏障barrier
+p屏障允许每个线程等待，直到多余的合作线程都到达某一点，然后从该点继续执行
+
+```C
+#include <pthread.h>
+
+int pthread_barrier_init(pthread_barrier_t *restrict barrier, 
+                           const pthread_barrierattr_t *restrict attr,
+                           unsigned int count
+);
+
+int pthread_barrire_wait(pthread_barrier_t *barrier);
+
+```
 
 ## 第十二章 线程控制
 
