@@ -909,6 +909,58 @@ int pthread_barrire_wait(pthread_barrier_t *barrier);
 
 ## 第十二章 线程控制
 
+### 12.2 线程限制
+- PTHREAD_KEYS_MAX    进程可以创建键(thread_local)的最大数目
+- PTHREAD_STACK_MIN   线程栈最小字节数
+- PTHREAD_THREADS_MAX 最大线程数
+
+### 12.3 线程属性
+
+```C
+#include <pthread.h>
+
+int pthread_atrr_init(pthread_attr_t *attr);
+
+int pthread_atrr_destory(pthread_attr_t *attr);
+
+int pthread_attr_getdetachstate(const pthread_attr_t *restrict attr, int *detachstate);
+
+int pthread_attr_setdetachstate(const pthread_attr_t *restrict attr, int *detachstate);
+```
+
+设置线程stackarr
+
+```C
+#include <pthread.h>
+int pthread_attr_getstacksize(const pthread_attr_t *resitrct attr, size_t *restrict stacksize);
+int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize);
+
+```
+
+### 12.4 同步属性
+
+#### 互斥量属性
+- 进程共享属性
+    - PTHREAD_PROCESS_PRIVATE 线程间共享
+    - PTHREAD_PROCESS_SHARED  多进程共享
+- 健壮属性
+    - PTHREAD_MUTEX_STALLED
+    - PTHREAD_MUTEX_ROBUST: 持有锁的进程在释放锁锁前终止了,另外的线程获取锁的时候会返回EOWNRDEAD而非0
+- 类型属性
+    - PTHREAD_MUTEX_NORMAL: 不做任何错误检查
+    - PTHREAD_MUTEX_ERRORCHECK: 提供错误检查
+    - PTHREAD_MUTEX_RECURSIVE: 同一线程可在锁释放前多次加锁
+
+|类型|没解锁时重新加锁|不占用锁时解锁|已解锁时解锁|
+|---|---|---|---|
+|PTHREAD_MUTEX_NORMAL|死锁|未定义|未定义|
+|PTHREAD_MUTEX_ERRORCHECK|返回错误|返回错误|返回错误|
+|PTHREAD_MUTEX_RECURSIVE|允许|返回错误|返回错误|
+
+#### 12.5 重入
+  - 线程安全：一个函数在相同的时间可以被多个线程安全调用
+  - 异步信号安全： 函数的异步信号处理程序的重入是安全的
+
 ## 第十三章 守护进程
 
 ## 第十四章 高级I/O
