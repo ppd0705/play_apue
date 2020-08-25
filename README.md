@@ -960,6 +960,28 @@ int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize);
 #### 12.5 重入
   - 线程安全：一个函数在相同的时间可以被多个线程安全调用
   - 异步信号安全： 函数的异步信号处理程序的重入是安全的
+  
+#### 12.6 线程特定数据（ThreadLocal?）
+
+```C
+include <pthread.h>
+
+int pthread_key_create(pthread_key_t *kep, void (*desctructor) (void*));
+
+int pthread_key_delete(pthread_key_t key);
+
+void *pthread_getspecific(pthread_key_t key);
+
+int pthread_setspecific(ptrhead_key_t key, const void *value);
+```
+
+`pthread_key_create`创建key并关联析构函数，析构函数在线程正常退出时会被调用
+
+`pthread_key_delete`取消key和线程特定数据的关联
+
+`pthread_getspecific` 获取关联数据
+
+`pthread_setspecific` 设置关联数据
 
 ## 第十三章 守护进程
 
