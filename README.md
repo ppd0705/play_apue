@@ -957,11 +957,11 @@ int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize);
 |PTHREAD_MUTEX_ERRORCHECK|返回错误|返回错误|返回错误|
 |PTHREAD_MUTEX_RECURSIVE|允许|返回错误|返回错误|
 
-#### 12.5 重入
+### 12.5 重入
   - 线程安全：一个函数在相同的时间可以被多个线程安全调用
   - 异步信号安全： 函数的异步信号处理程序的重入是安全的
   
-#### 12.6 线程特定数据（ThreadLocal?）
+### 12.6 线程特定数据（ThreadLocal?）
 
 ```C
 include <pthread.h>
@@ -982,6 +982,18 @@ int pthread_setspecific(ptrhead_key_t key, const void *value);
 `pthread_getspecific` 获取关联数据
 
 `pthread_setspecific` 设置关联数据
+
+### 12.7  取消选项
+
+取消点：线程检查他是否被取消的一个位置
+
+默认情况下线程在取消请求发出后还是继续运行，直到达到某个取消点
+
+可以通过调用`pthread_testcancel`在程序中添加自己的取消点
+
+取消类型有两种，默认为推迟取消，即遇到取消点才取消，另外一种是异步取消，可以在任意时间取消
+
+
 
 ## 第十三章 守护进程
 
