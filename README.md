@@ -989,6 +989,8 @@ int pthread_setspecific(ptrhead_key_t key, const void *value);
 
 默认情况下线程在取消请求发出后还是继续运行，直到达到某个取消点
 
+可以通过调用`pthread_sigmask`设置信号屏蔽字
+
 可以通过调用`pthread_testcancel`在程序中添加自己的取消点
 
 取消类型有两种，默认为推迟取消，即遇到取消点才取消，另外一种是异步取消，可以在任意时间取消
