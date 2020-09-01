@@ -1003,6 +1003,24 @@ int pthread_setspecific(ptrhead_key_t key, const void *value);
 
 可以通过`pthread_kill`给指定线程发信号
 
+### 12.9 线程和fork
+
+- fork的子进程只存在一个线程，就是父进程调用fork的线程副本
+- 子进程可能不包含占用锁的线程的副本，所以没办法知道占用了那哪些锁，需要释放哪些锁
+- 清除锁需要调用`pthread_fork`建立fork程序
+```C
+#include <pthread.h>
+
+int pthread_atfork(void (*prepare)(void), void (*parent)(void), void(*child)(void));
+```
+    - prepare: fork前获取所有锁
+    - parent: 在fork返回前在父进程的上下文中对所有锁进行解锁
+    - child: 在fork返回前在子进程的上下文中对所有锁进行解锁
+
+### 12.10 线程和IO
+
+使用pread代替lseek+read使偏移量的设定和数据的读取称为一个原子操作，pwrite同理
+
 
 ## 第十三章 守护进程
 
