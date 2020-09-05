@@ -1024,6 +1024,26 @@ int pthread_atfork(void (*prepare)(void), void (*parent)(void), void(*child)(voi
 
 ## 第十三章 守护进程
 
+### 13.3 守护进程创建
+- unmask(0)清空文件创建屏蔽字
+- fork, 父进程退出, setsid创建新会话
+- 将工作目录改至根目录，以免影响mount的文件系统卸载
+- 关闭不再需要的文件描述符
+- 使 0/1/2文件指向/dev/null, 这样进程炳辉有任何标准输入输出
+
+### 13.4 出错记录
+syslogd是一个集中的收回进程出错记录设施
+可以接受三种消息
+- 用户进程通过unix套接字/dev/log发送消息
+- 内核进程通过unix套接字/dev/klog发送消息
+- 其他可通过UDP 514端口发送消息
+
+### 13.6 守护进程惯例
+- 若使用锁文件，通常放于/var/run目录，文件名同事是服务的名字如crond.pid
+- 配置文件通过放于/etc目录，如/etc/syslog.conf
+- 虽然可以用命令行直接启动，通常用systemd启动和管理
+- 通常接收SIGHUP信号重新启动
+
 ## 第十四章 高级I/O
 
 ## 第十五章 进程间通信
