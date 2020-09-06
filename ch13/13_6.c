@@ -8,17 +8,29 @@
 #include <sys/stat.h>
 
 
-#include LOCKFILE "/var/run/daemon.pid"
-#include LOCKMODE (S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)
+#define LOCKFILE "my_daemon.pid"
+#define LOCKMODE (S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)
 
 
-extern int lockfile(int);
+
+int
+lockfile(int fd)
+{
+    struct flock fl;
+
+    fl.l_type = F_WRLCK;
+    fl.l_start = 0;
+    fl.l_whence = SEEK_SET;
+    fl.l_len = 0;
+    return(fcntl(fd, F_SETLK, &fl));
+}
+
 
 int already_running(void) {
     int fd;
     char buf[16];
 
-    fd = open(LOCKFILE, O_RDWR | OCREAT, LOCKMODE);
+    fd = open(LOCKFILE, O_RDWR | O_CREAT, LOCKMODE);
 
     if (fd < 0) {
         syslog(LOG_ERR, "can't open %s: %s", LOCKFILE, strerror(errno));

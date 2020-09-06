@@ -57,10 +57,3 @@ void daemonize(const char *cmd) {
         exit(1);
     }
 }
-
-
-int main(void) {
-
-    daemonize("htop");
-    sleep(20);
-}
