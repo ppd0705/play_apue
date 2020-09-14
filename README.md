@@ -1058,6 +1058,39 @@ syslogd是一个集中的收回进程出错记录设施
 
 对于一个非阻塞的描述符，如果无数据可读，read返回-1， errno被设置为EAGIAN, 如果文件结束返回0
 
+### 14.3 记录锁
+
+记录锁(record locking)可以锁定文件中的一个区域，阻止其他进程修改同一文件区
+
+```C
+#incldue <fcntl.h>
+
+int fcntl(int fd, int cmd, .../* struct flock *flockptr */);
+
+
+struct flock {
+    short l_type; /* F_RDLCK, F_WRLCK, F_UNLCK */
+    short l_whence; /* SEEK_SET, SEET_CUR, SEEK_END */
+    off_t l_start; /* offeset in bytes, relative to_lwhence */
+    off_t l_len; /* length, in bytes, 0 means lock to EOF */
+    pidt_t l_pid; /* returned with F_GETLK */
+}
+```
+- l_type锁类型：F_RDLCK共享读锁, F_WRLCK独占写锁,F_UNLCK解锁
+- l_len =0 表示扩展到最大可能偏移量。当l_whence=SEEK_SET,l_start=0时锁定整个文件
+- 加读锁时，改文件必须是读打开，加写锁是，文件必须是写打开
+- cmd有三种命令：
+  - F_GETLK
+  - F_SETLK
+  - F_SETLKW
+  
+  
+锁的自动继承和释放规则
+
+- 当一个进程终止时，他锁建立的锁全部释放
+- 一个描述符关闭时，其锁引用的文件上的锁会释放，即使此时有其他描述符也指向该文件
+- 子进程不继承父进程锁设置的锁
+
 ## 第十五章 进程间通信
 
 ## 第十六章 套接字
